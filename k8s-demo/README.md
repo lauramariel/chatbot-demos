@@ -1,6 +1,6 @@
 # Chatbot demo
 
-This is a real time chatbot demo which talks to the deployed model endpoint over the REST API. 
+This is a real time chatbot demo which talks to the deployed model endpoint over the REST API that works with GPT-in-a-Box K8s. 
 
 ## Install Python requirements
 
