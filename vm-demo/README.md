@@ -1,4 +1,4 @@
-# Chatbot demo
+# Chatbot demo for GPT-in-a-Box K8s version
 
 This is a real time chatbot demo which talks to the deployed model endpoint over the REST API that works with tiny-llama model on a VM. 
 
@@ -16,6 +16,6 @@ Download and deploy the following models as per instructions provided in the [do
 
 ## Run Chatbot app
 
-Once the inference server is up, run
+Once the inference server is up, update `config.txt` with the name of your K8s deployment and run
 
     streamlit run chat.py
