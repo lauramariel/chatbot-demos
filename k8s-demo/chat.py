@@ -9,6 +9,7 @@ import sys
 import requests
 import streamlit as st
 import subprocess
+import time
 
 
 # Add supported models to the list
@@ -197,7 +198,10 @@ def generate_response(input_text):
     print(f"Url: {url}")
     print(f"Headers: {headers}")
     try:
+        start = time.perf_counter()
         response = requests.post(url, json=input_prompt, timeout=120, headers=headers)
+        request_time = time.perf_counter() - start
+        print(request_time)
         response.raise_for_status()
     except requests.exceptions.RequestException:
         print("Error in requests: ", url)

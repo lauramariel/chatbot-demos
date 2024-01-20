@@ -8,6 +8,7 @@ import json
 import sys
 import requests
 import streamlit as st
+import time
 
 # Add supported models to the list
 AVAILABLE_MODELS = ["tiny-llama"]
@@ -31,7 +32,10 @@ else:
     USER_AVATAR = USER_SVG
 
 # App title
-st.title("Hola Nutanix")
+st.title("Welcome to GTS '24")
+st.subheader("Note that this lab is for demo purposes only to show connecting a chatbot app to a running LLM. "
+        "The lab is not using GPU, so responses may take up to a minute and will likely produce lower quality responses "
+        "than running a larger model on GPU.")
 
 
 def clear_chat_history():
@@ -51,7 +55,7 @@ with st.sidebar:
 
     st.title("GPT-in-a-Box")
     st.markdown(
-        "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT"
+        "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT "
         "capabilities while maintaining control of their data and applications. Read the "
         "[announcement]"
         "(https://www.nutanix.com/blog/nutanix-simplifies-your-ai-innovation-learning-curve)"
@@ -64,9 +68,10 @@ with st.sidebar:
     if selected_model == "tiny-llama":
         LLM = "tiny-llama"
         LLM_HISTORY = "on"
-        st.markdown("Tiny Llama is a compact model with 1.1B model that can run on CPU. "
+        st.markdown("[Tiny Llama](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) "
+                "is a compact model with 1.1B model that can run on CPU. "
                 "It uses the same architecture and tokenizer as Llama 2. It was finetuned "
-                "It was finetuned on a variant of the UltraChat dataset."
+                "on a variant of the UltraChat dataset."
         )
     elif selected_model == "llama2-7b":
         LLM = "llama2_7b"
@@ -165,7 +170,10 @@ def generate_response(input_text):
     url = f"http://localhost:8080/predictions/{LLM}"
     headers = {"Content-Type": "application/json; charset=utf-8"}
     try:
+        start = time.perf_counter()
         response = requests.post(url, json=input_prompt, timeout=120, headers=headers)
+        request_time = time.perf_counter() - start
+        print(request_time)
         response.raise_for_status()
     except requests.exceptions.RequestException:
         print("Error in requests: ", url)
@@ -217,13 +225,35 @@ def generate_chat_response(input_prompt):
                 string_dialogue += (
                     "Assistant: " + dict_message["content"] + " [INST]" + "\n\n"
                 )
-    string_dialogue += "User: " + f"{input_prompt}" + "\n\n"
-    input_text = f"{string_dialogue}" + "\n\n" + "Assistant: [/INST]"
+    if LLM == "tiny-llama":
+        string_dialogue += "<|user|>\n " + f"{input_prompt}" + "\n\n"
+        input_text = f"{string_dialogue}" + "\n\n" + "<|assistant|>\n"
+    else:
+        string_dialogue += "User: " + f"{input_prompt}" + "\n\n"
+        input_text = f"{string_dialogue}" + "\n\n" + "Assistant: [/INST]"
+
     output = generate_response(input_text)
     # Generation failed
     if len(output) <= len(input_text):
         return ""
-    response = output[len(input_text) :]
+    #print(f"\nInput: {input_text}")
+    #print(f"\nOutput: {output}")
+
+    # Tiny Llama Specific
+    if LLM == "tiny-llama":
+        # We want the portion of text after the second instance of <|assistant|> in the output
+        substring = "<|assistant|>"
+        first_index = output.find(substring)
+        if first_index != -1:
+            second_index = output.find(substring, first_index + 1)
+            if second_index != -1:
+                response = output[second_index + len(substring):]
+                #print(f"\nResponse: {response}")
+        else:
+            st.error("Output not in expected format.")
+    else:
+        response = output[len(input_text) :]
+    
     return response
 
 
