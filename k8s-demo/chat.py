@@ -11,10 +11,9 @@ import streamlit as st
 import subprocess
 import time
 
-
 # Add supported models to the list
-AVAILABLE_MODELS = ["llama2-7b-chat", "codellama-7b-python"]
-# AVAILABLE_MODELS = ["llama2-7b", "mpt-7b" , "falcon-7b"]
+AVAILABLE_MODELS = ["tiny-llama"]
+# AVAILABLE_MODELS = ["llama2-7b-chat", "codellama-7b-python"]
 ASSISTANT_SVG = "assistant.svg"
 USER_SVG = "user.svg"
 LOGO_SVG = "nutanix.svg"
@@ -29,7 +28,7 @@ try:
             key, value = line.strip().split('=')
             if key == "DEPLOY_NAME":
                 DEPLOY_NAME = value
-        print(f"Using deployment {DEPLOY_NAME}")
+        #print(f"Using deployment {DEPLOY_NAME}")
 except Exception as e:
     st.error(f"{e}")
     st.stop()
@@ -91,6 +90,7 @@ with st.sidebar:
             st.image(LOGO_SVG, width=150)
 
     st.title("GPT-in-a-Box")
+    st.subheader("Powered by NKE")
     st.markdown(
         "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT "
         "capabilities while maintaining control of their data and applications. Read the "
