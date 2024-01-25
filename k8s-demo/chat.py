@@ -208,7 +208,7 @@ def generate_response(input_text):
     headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
     try:
         start = time.perf_counter()
-        response = requests.post(url, json=input_prompt, timeout=120, headers=headers)
+        response = requests.post(url, json=input_prompt, timeout=600, headers=headers)
         request_time = time.perf_counter() - start
         print(request_time)
         response.raise_for_status()

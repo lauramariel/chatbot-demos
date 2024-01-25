@@ -8,18 +8,53 @@ import json
 import sys
 import requests
 import streamlit as st
+import subprocess
 import time
 
 # Add supported models to the list
 AVAILABLE_MODELS = ["tiny-llama"]
-#AVAILABLE_MODELS = ["llama2-7b-chat", "codellama-7b-python"]
-# AVAILABLE_MODELS = ["llama2-7b", "mpt-7b" , "falcon-7b"]
 ASSISTANT_SVG = "assistant.svg"
 USER_SVG = "user.svg"
 LOGO_SVG = "nutanix.svg"
 
 LLM_MODE = "chat"
 LLM_HISTORY = "off"
+
+# Read deployment name from file to get values to construct URL
+try:
+    with open("config.txt", "r") as f:
+        for line in f:
+            key, value = line.strip().split('=')
+            if key == "DEPLOY_NAME":
+                DEPLOY_NAME = value
+        #print(f"Using deployment {DEPLOY_NAME}")
+except Exception as e:
+    st.error(f"{e}")
+    st.stop()
+
+get_svc_hostname_cmd=f'kubectl get inferenceservice {DEPLOY_NAME} '
+get_svc_hostname_cmd+='-o jsonpath=\'{.status.url}\' | cut -d "/" -f 3'
+#print(get_svc_hostname_cmd)
+svc = subprocess.run(get_svc_hostname_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+get_ingress_host_cmd="kubectl get po -l istio=ingressgateway -n istio-system -o jsonpath='{.items[0].status.hostIP}'"
+#print(get_ingress_host_cmd)
+host = subprocess.run(get_ingress_host_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+get_port_cmd="kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name==\"http2\")].nodePort}'"
+#print(get_port_cmd)
+port = subprocess.run(get_port_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+if svc.stderr or host.stderr or port.stderr:
+    st.error(f"Encountered 1 or more errors when running kubectl commands, please check that your KUBECONFIG is valid and your cluster is running \n" \
+    f"{svc.stderr}\n" \
+    f"{host.stderr}\n" \
+    f"{port.stderr}\n")
+    st.stop()
+
+SERVICE_HOSTNAME = svc.stdout.strip()
+INGRESS_HOST = host.stdout.strip()
+INGRESS_PORT = port.stdout.strip()
 
 if not os.path.exists(ASSISTANT_SVG):
     ASSISTANT_AVATAR = None
@@ -54,6 +89,7 @@ with st.sidebar:
             st.image(LOGO_SVG, width=150)
 
     st.title("GPT-in-a-Box")
+    st.subheader("Powered by NKE")
     st.markdown(
         "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT "
         "capabilities while maintaining control of their data and applications. Read the "
@@ -167,11 +203,11 @@ def generate_response(input_text):
 
     """
     input_prompt = get_json_format_prompt(input_text)
-    url = f"http://localhost:8080/predictions/{LLM}"
-    headers = {"Content-Type": "application/json; charset=utf-8"}
+    url = f"http://{INGRESS_HOST}:{INGRESS_PORT}/v2/models/{LLM}/infer"
+    headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
     try:
         start = time.perf_counter()
-        response = requests.post(url, json=input_prompt, timeout=600, headers=headers)
+        response = requests.post(url, json=input_prompt, timeout=120, headers=headers)
         request_time = time.perf_counter() - start
         print(request_time)
         response.raise_for_status()
