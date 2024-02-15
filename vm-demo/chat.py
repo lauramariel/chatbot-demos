@@ -31,12 +31,14 @@ if not os.path.exists(USER_SVG):
 else:
     USER_AVATAR = USER_SVG
 
+html_code = """
+<div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+Note: This lab is for demo purposes only to show connecting a chatbot app to a running LLM. The lab is not using GPU, so responses may take up to a minute and will likely produce lower quality responses than running a larger model on GPU.</div>
+"""
+
 # App title
 st.title("Welcome to GTS '24")
-st.subheader("Note that this lab is for demo purposes only to show connecting a chatbot app to a running LLM. "
-        "The lab is not using GPU, so responses may take up to a minute and will likely produce lower quality responses "
-        "than running a larger model on GPU.")
-
+st.markdown(html_code, unsafe_allow_html=True)
 
 def clear_chat_history():
     """
@@ -241,14 +243,11 @@ def generate_chat_response(input_prompt):
 
     # Tiny Llama Specific
     if LLM == "tiny-llama":
-        # We want the portion of text after the second instance of <|assistant|> in the output
+        # We want the portion of text after the last instance of <|assistant|> in the output
         substring = "<|assistant|>"
-        first_index = output.find(substring)
-        if first_index != -1:
-            second_index = output.find(substring, first_index + 1)
-            if second_index != -1:
-                response = output[second_index + len(substring):]
-                #print(f"\nResponse: {response}")
+        last_index = output.rfind(substring)
+        if last_index != -1:
+            response = output[last_index + len(substring):]
         else:
             st.error("Output not in expected format.")
     else:
@@ -315,3 +314,4 @@ def add_assistant_response():
 
 
 add_assistant_response()
+
