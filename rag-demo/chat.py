@@ -99,46 +99,6 @@ with st.sidebar:
                 "It uses the same architecture and tokenizer as Llama 2. It was finetuned "
                 "on a variant of the UltraChat dataset."
         )
-    elif selected_model == "llama2-7b":
-        LLM = "llama2_7b"
-        st.markdown(
-            "Llama2 is a state-of-the-art foundational large language model which was "
-            "pretrained on publicly available online data sources. This chat model "
-            "leverages publicly available instruction datasets and over 1 "
-            "million human annotations."
-        )
-    elif selected_model == "mpt-7b":
-        LLM = "mpt_7b"
-        st.markdown(
-            "MPT-7B is a decoder-style transformer with 6.7B parameters. It was trained "
-            "on 1T tokens of text and code that was curated by MosaicML’s data team. "
-            "This base model includes FlashAttention for fast training and inference and "
-            "ALiBi for finetuning and extrapolation to long context lengths."
-        )
-    elif selected_model == "falcon-7b":
-        LLM = "falcon_7b"
-        st.markdown(
-            "Falcon-7B is a 7B parameters causal decoder-only model built by TII and "
-            "trained on 1,500B tokens of RefinedWeb enhanced with curated corpora."
-        )
-    elif selected_model == "codellama-7b-python":
-        LLM = "codellama_7b_python"
-        LLM_MODE = "code"
-        st.markdown(
-            "Code Llama is a large language model that can use text prompts to generate "
-            "and discuss code. It has the potential to make workflows faster and more "
-            "efficient for developers and lower the barrier to entry for people who are "
-            "learning to code."
-        )
-    elif selected_model == "llama2-7b-chat":
-        LLM = "llama2_7b_chat"
-        LLM_HISTORY = "on"
-        st.markdown(
-            "Llama2 is a state-of-the-art foundational large language model which was "
-            "pretrained on publicly available online data sources. This chat model "
-            "leverages publicly available instruction datasets and over 1 million "
-            "human annotations."
-        )
     else:
         sys.exit()
 
@@ -180,123 +140,18 @@ for message in st.session_state.messages:
 
 st.sidebar.button("Clear Chat History", on_click=clear_chat_history)
 
-
-def generate_response(input_text, qa_chain):
-    """
-    Generates a response from the LLM based on the given prompt.
-
-    Parameters:
-    - prompt_input (str): The input prompt for generating a response.
-
-    Returns:
-    - str: The generated response.
-
-    """
-    input_prompt = get_json_format_prompt(input_text)
-
-
+def generate_response(input_prompt):
     ## Create the QA Chain
-    return qa_chain({'query':input_prompt})['result']
-
-def generate_chat_response(input_prompt):
-    """
-    Generates a chat-based response by including the chat history in the input prompt.
-
-    Parameters:
-    - prompt_input (str): The user-provided prompt.
-
-    Returns:
-    - str: The generated chat-based response.
-
-    """
-    # Used [INST] and <<SYS>> tags in the input prompts for LLAMA 2 models.
-    # These are tags used to indicate different types of input within the conversation.
-    # "INST" stands for "instruction" and used to provide user queries to the model.
-    # "<<SYS>>" signifies system-related instructions and used to prime the
-    # model with context, instructions, or other information relevant to the use case.
-
-    if LLM == "tiny-llama":
-        string_dialogue = (
-            "<|system|>"
-            "You are a helpful assistant.</s>"
-        )
-    else:
-        string_dialogue = (
-            "[INST] <<SYS>> You are a helpful assistant. "
-            " You answer the question asked by 'User' once"
-            " as 'Assistant'. <</SYS>>[/INST]" + "\n\n"
-        )
-
-    for dict_message in st.session_state.messages[:-1]:
-        if dict_message["role"] == "user":
-            if LLM == "tiny-llama":
-                string_dialogue += "<|user|>\n " + dict_message["content"] + "</s>" 
-            else:
-                string_dialogue += "User: " + dict_message["content"] + "[/INST]" + "\n\n"
-        else:
-            if LLM == "tiny-llama":
-                string_dialogue += "<|assistant|>\n"
-            else:
-                string_dialogue += (
-                    "Assistant: " + dict_message["content"] + " [INST]" + "\n\n"
-                )
-    if LLM == "tiny-llama":
-        string_dialogue += "<|user|>\n " + f"{input_prompt}" + "\n\n"
-        input_text = f"{string_dialogue}" + "\n\n" + "<|assistant|>\n"
-    else:
-        string_dialogue += "User: " + f"{input_prompt}" + "\n\n"
-        input_text = f"{string_dialogue}" + "\n\n" + "Assistant: [/INST]"
 
     qa_chain = create_qa_chain()
-    output = generate_response(input_text, qa_chain)
-    # Generation failed
-    if len(output) <= len(input_text):
-        return ""
-    print(f"\nInput: {input_text}")
-    #print(f"\nOutput: {output}")
-
-    # Tiny Llama Specific
-    if LLM == "tiny-llama":
-        # We want the portion of text after the last instance of <|assistant|> in the output
-        substring = "<|assistant|>"
-        last_index = output.rfind(substring)
-        if last_index != -1:
-            response = output[last_index + len(substring):]
-        else:
-            st.error("Output not in expected format.")
-    else:
-        response = output[len(input_text) :]
-    
-    return response
-
+    print(f"\nInput: {input_prompt}")
+    return qa_chain({'query':input_prompt})['result']
 
 # User-provided prompt
 if prompt := st.chat_input("Ask your query"):
     message = {"role": "user", "content": prompt}
     st.session_state.messages.append(message)
     add_message(message)
-
-
-def get_json_format_prompt(prompt_input):
-    """
-    Converts the input prompt into the JSON format expected by the LLM.
-
-    Parameters:
-    - prompt_input (str): The input prompt.
-
-    Returns:
-    - dict: The prompt in JSON format.
-
-    """
-    data = [prompt_input]
-    data_dict = {
-        "id": "1",
-        "inputs": [
-            {"name": "input0", "shape": [-1], "datatype": "BYTES", "data": data}
-        ],
-    }
-    return data_dict
-
 
 # Generate a new response if last message is not from assistant
 def add_assistant_response():
@@ -308,10 +163,7 @@ def add_assistant_response():
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
             with st.spinner("Thinking..."):
-                if LLM_HISTORY == "on":
-                    response = generate_chat_response(prompt)
-                else:
-                    response = generate_response(prompt)
+                response = generate_response(prompt)
                 if not response:
                     st.markdown(
                         "<p style='color:red'>Inference backend is unavailable. "
@@ -388,8 +240,6 @@ def create_qa_chain():
                                         chain_type_kwargs={'prompt': llm_prompt})
 
     return qa_chain
-
-
 
 add_assistant_response()
 
