@@ -14,9 +14,10 @@ import time
 AVAILABLE_MODELS = ["tiny-llama"]
 #AVAILABLE_MODELS = ["llama2-7b-chat", "codellama-7b-python"]
 # AVAILABLE_MODELS = ["llama2-7b", "mpt-7b" , "falcon-7b"]
-ASSISTANT_SVG = "assistant.svg"
-USER_SVG = "user.svg"
-LOGO_SVG = "nutanix.svg"
+BASE_DIR = os.environ["CHAT_DIR"] + "/vm-demo/"
+ASSISTANT_SVG = BASE_DIR + "assistant.svg"
+USER_SVG = BASE_DIR + "user.svg"
+LOGO_SVG = BASE_DIR + "nutanix.svg"
 
 LLM_MODE = "chat"
 LLM_HISTORY = "off"
