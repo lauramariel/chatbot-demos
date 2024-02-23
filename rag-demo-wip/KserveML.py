@@ -87,12 +87,14 @@ class KserveML(LLM):
         }
         payload.update(_model_kwargs)
         payload.update(kwargs)
-        #print(f"Sending request to {self.endpoint_url} with payload: {payload}")  # Debug output
+        print(f"Sending request to {self.endpoint_url} with payload: {payload}")  # Debug output
 
+        SERVICE_HOSTNAME = "tiny-llama-deploy.default.example.com"
         # send request
+        headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
         try:
-            response = requests.post(self.endpoint_url, json=payload)
-            #print(f"Response received: {response.text}")  # Debug output
+            response = requests.post(self.endpoint_url, headers=headers, json=payload)
+            print(f"Response received: {response.text}")  # Debug output
         except requests.exceptions.RequestException as e:
             raise ValueError(f"Error raised by inference endpoint: {e}")
 
