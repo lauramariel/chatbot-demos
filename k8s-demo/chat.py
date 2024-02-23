@@ -13,25 +13,29 @@ import time
 
 # Add supported models to the list
 AVAILABLE_MODELS = ["tiny-llama"]
-# AVAILABLE_MODELS = ["llama2-7b-chat", "codellama-7b-python"]
-ASSISTANT_SVG = "assistant.svg"
-USER_SVG = "user.svg"
-LOGO_SVG = "nutanix.svg"
+#AVAILABLE_MODELS = ["llama2-7b-chat", "codellama-7b-python"]
+# AVAILABLE_MODELS = ["llama2-7b", "mpt-7b" , "falcon-7b"]
+BASE_DIR = os.environ["CHAT_DIR"] + "/k8s-demo/"
+ASSISTANT_SVG = BASE_DIR + "assistant.svg"
+USER_SVG = BASE_DIR + "user.svg"
+LOGO_SVG = BASE_DIR + "nutanix.svg"
 
 LLM_MODE = "chat"
 LLM_HISTORY = "off"
 
 # Read deployment name from file to get values to construct URL
-try:
-    with open("config.txt", "r") as f:
-        for line in f:
-            key, value = line.strip().split('=')
-            if key == "DEPLOY_NAME":
-                DEPLOY_NAME = value
-        #print(f"Using deployment {DEPLOY_NAME}")
-except Exception as e:
-    st.error(f"{e}")
-    st.stop()
+# try:
+#     with open("config.txt", "r") as f:
+#         for line in f:
+#             key, value = line.strip().split('=')
+#             if key == "DEPLOY_NAME":
+#                 DEPLOY_NAME = value
+#         #print(f"Using deployment {DEPLOY_NAME}")
+# except Exception as e:
+#     st.error(f"{e}")
+#     st.stop()
+
+DEPLOY_NAME="tiny-llama-deploy"
 
 get_svc_hostname_cmd=f'kubectl get inferenceservice {DEPLOY_NAME} '
 get_svc_hostname_cmd+='-o jsonpath=\'{.status.url}\' | cut -d "/" -f 3'
@@ -67,12 +71,15 @@ if not os.path.exists(USER_SVG):
 else:
     USER_AVATAR = USER_SVG
 
+html_code = """
+<div style="padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+Note: This lab is for demo purposes only to show connecting a chatbot app to a running LLM. The lab is not using GPU, so responses may take up to a minute and will likely produce lower quality responses than running a larger model on GPU.</div>
+"""
+
 # App title
 st.title("Welcome to GTS '24")
-st.subheader("Note that this lab is for demo purposes only to show connecting a chatbot app to a running LLM. "
-        "The lab is not using GPU, so responses may take up to a minute and will likely produce lower quality responses "
-        "than running a larger model on GPU.")
-
+st.subheader("Powered by Nutanix Kubernetes Engine")
+st.markdown(html_code, unsafe_allow_html=True)
 
 def clear_chat_history():
     """
@@ -90,7 +97,6 @@ with st.sidebar:
             st.image(LOGO_SVG, width=150)
 
     st.title("GPT-in-a-Box")
-    st.subheader("Powered by NKE")
     st.markdown(
         "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT "
         "capabilities while maintaining control of their data and applications. Read the "
@@ -204,8 +210,8 @@ def generate_response(input_text):
 
     """
     input_prompt = get_json_format_prompt(input_text)
-    url = f"http://{INGRESS_HOST}:{INGRESS_PORT}/v2/models/{LLM}/infer"
-    headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
+    url = f"http://localhost:8080/predictions/{LLM}"
+    headers = {"Content-Type": "application/json; charset=utf-8"}
     try:
         start = time.perf_counter()
         response = requests.post(url, json=input_prompt, timeout=600, headers=headers)
@@ -273,19 +279,16 @@ def generate_chat_response(input_prompt):
     # Generation failed
     if len(output) <= len(input_text):
         return ""
-    #print(f"\nInput: {input_text}")
+    print(f"\nInput: {input_text}")
     #print(f"\nOutput: {output}")
 
     # Tiny Llama Specific
     if LLM == "tiny-llama":
-        # We want the portion of text after the second instance of <|assistant|> in the output
+        # We want the portion of text after the last instance of <|assistant|> in the output
         substring = "<|assistant|>"
-        first_index = output.find(substring)
-        if first_index != -1:
-            second_index = output.find(substring, first_index + 1)
-            if second_index != -1:
-                response = output[second_index + len(substring):]
-                #print(f"\nResponse: {response}")
+        last_index = output.rfind(substring)
+        if last_index != -1:
+            response = output[last_index + len(substring):]
         else:
             st.error("Output not in expected format.")
     else:
@@ -352,3 +355,4 @@ def add_assistant_response():
 
 
 add_assistant_response()
+

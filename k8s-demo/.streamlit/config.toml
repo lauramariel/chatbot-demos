@@ -1,5 +1,4 @@
 [theme]
 base="dark"
-
-[ui]
-hideTopBar = true
+primaryColor="#7855FA"
+font="sans serif"
