@@ -93,7 +93,11 @@ class KserveML(LLM):
         # send request
         headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
         try:
+            import time
+            start = time.perf_counter()
             response = requests.post(self.endpoint_url, headers=headers, json=payload)
+            request_time = time.perf_counter() - start
+            print(request_time)
             print(f"Response received: {response.text}")  # Debug output
         except requests.exceptions.RequestException as e:
             raise ValueError(f"Error raised by inference endpoint: {e}")
