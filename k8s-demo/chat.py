@@ -210,8 +210,8 @@ def generate_response(input_text):
 
     """
     input_prompt = get_json_format_prompt(input_text)
-    url = f"http://localhost:8080/predictions/{LLM}"
-    headers = {"Content-Type": "application/json; charset=utf-8"}
+    url = f"http://{INGRESS_HOST}:{INGRESS_PORT}/v2/models/{LLM}/infer"
+    headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
     try:
         start = time.perf_counter()
         response = requests.post(url, json=input_prompt, timeout=600, headers=headers)
