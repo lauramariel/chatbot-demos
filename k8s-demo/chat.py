@@ -10,6 +10,10 @@ import requests
 import streamlit as st
 import subprocess
 import time
+from kubernetes import client, config
+# from kserve import KServeClient
+# 2024-02-27 - Note - importing kserve with streamlit gives the warning
+# Failed to set SIGTERM handler, processes mightnot be cleaned up properly on exit.
 
 # Add supported models to the list
 AVAILABLE_MODELS = ["tiny-llama"]
@@ -23,43 +27,47 @@ LOGO_SVG = BASE_DIR + "nutanix.svg"
 LLM_MODE = "chat"
 LLM_HISTORY = "off"
 
-# Read deployment name from file to get values to construct URL
-# try:
-#     with open("config.txt", "r") as f:
-#         for line in f:
-#             key, value = line.strip().split('=')
-#             if key == "DEPLOY_NAME":
-#                 DEPLOY_NAME = value
-#         #print(f"Using deployment {DEPLOY_NAME}")
-# except Exception as e:
-#     st.error(f"{e}")
-#     st.stop()
-
 DEPLOY_NAME="tiny-llama-deploy"
 
-get_svc_hostname_cmd=f'kubectl get inferenceservice {DEPLOY_NAME} '
-get_svc_hostname_cmd+='-o jsonpath=\'{.status.url}\' | cut -d "/" -f 3'
-#print(get_svc_hostname_cmd)
-svc = subprocess.run(get_svc_hostname_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+# Load Kubeconfig and create API Client
+config.load_kube_config()
+api = client.CoreV1Api()
 
-get_ingress_host_cmd="kubectl get po -l istio=ingressgateway -n istio-system -o jsonpath='{.items[0].status.hostIP}'"
-#print(get_ingress_host_cmd)
-host = subprocess.run(get_ingress_host_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+# Create KServe client to access custom resource
+# KServe = KServeClient()
 
-get_port_cmd="kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.spec.ports[?(@.name==\"http2\")].nodePort}'"
-#print(get_port_cmd)
-port = subprocess.run(get_port_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+# Assumes Istio is being used
+def get_ingress_host():
+    ingress_pod = api.list_namespaced_pod(namespace="istio-system",label_selector='istio=ingressgateway')
+    ingress_host = ingress_pod.items[0].status.host_ip
+    return ingress_host
 
-if svc.stderr or host.stderr or port.stderr:
-    st.error(f"Encountered 1 or more errors when running kubectl commands, please check that your KUBECONFIG is valid and your cluster is running \n" \
-    f"{svc.stderr}\n" \
-    f"{host.stderr}\n" \
-    f"{port.stderr}\n")
-    st.stop()
+def get_ingress_port():
+    service = api.read_namespaced_service(name="istio-ingressgateway",namespace="istio-system")
+    for i in range(len(service.spec.ports)):
+        if service.spec.ports[i].port == 80:
+            ingress_port = service.spec.ports[i].node_port
+            return ingress_port
 
-SERVICE_HOSTNAME = svc.stdout.strip()
-INGRESS_HOST = host.stdout.strip()
-INGRESS_PORT = port.stdout.strip()
+def get_service_hostname():
+    get_svc_hostname_cmd=f'kubectl get inferenceservice {DEPLOY_NAME} '
+    get_svc_hostname_cmd+='-o jsonpath=\'{.status.url}\' | cut -d "/" -f 3'
+    #print(get_svc_hostname_cmd)
+    svc = subprocess.run(
+        get_svc_hostname_cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True)
+    return svc.stdout.strip()
+
+    # inference_service = KServe.get(DEPLOY_NAME)
+    # service_hostname = inference_service.get("status").get("url").replace('http://', '')
+    # return service_hostname
+
+SERVICE_HOSTNAME = get_service_hostname()
+INGRESS_HOST = get_ingress_host()
+INGRESS_PORT = get_ingress_port()
 
 if not os.path.exists(ASSISTANT_SVG):
     ASSISTANT_AVATAR = None
@@ -159,6 +167,8 @@ with st.sidebar:
     else:
         sys.exit()
 
+    st.markdown(f"Connected to inference service at `http://{INGRESS_HOST}:{INGRESS_PORT}`")
+
     if "model" in st.session_state and st.session_state["model"] != LLM:
         clear_chat_history()
 
@@ -195,7 +205,7 @@ def add_message(chatmessage):
 for message in st.session_state.messages:
     add_message(message)
 
-st.sidebar.button("Clear Chat History", on_click=clear_chat_history)
+# st.sidebar.button("Clear Chat History", on_click=clear_chat_history)
 
 
 def generate_response(input_text):
@@ -302,7 +312,6 @@ if prompt := st.chat_input("Ask your query"):
     message = {"role": "user", "content": prompt}
     st.session_state.messages.append(message)
     add_message(message)
-
 
 def get_json_format_prompt(prompt_input):
     """
