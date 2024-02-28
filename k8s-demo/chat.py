@@ -224,6 +224,7 @@ def generate_response(input_text):
     headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
     try:
         start = time.perf_counter()
+        print(f"Sending request to {url} with payload: {input_prompt}")
         response = requests.post(url, json=input_prompt, timeout=600, headers=headers)
         request_time = time.perf_counter() - start
         print(request_time)
@@ -289,7 +290,7 @@ def generate_chat_response(input_prompt):
     # Generation failed
     if len(output) <= len(input_text):
         return ""
-    print(f"\nInput: {input_text}")
+    #print(f"\nInput: {input_text}")
     #print(f"\nOutput: {output}")
 
     # Tiny Llama Specific
