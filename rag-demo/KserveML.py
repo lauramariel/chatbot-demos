@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Mapping, Optional
 
 import requests
+import json
 
 from langchain.callbacks.manager import CallbackManagerForLLMRun
 from langchain.llms.base import LLM
@@ -87,7 +88,8 @@ class KserveML(LLM):
         }
         payload.update(_model_kwargs)
         payload.update(kwargs)
-        print(f"Sending request to {self.endpoint_url} with payload: {payload}")  # Debug output
+        payload_formatted = json.dumps(payload, indent=4)
+        print(f"Sending request to {self.endpoint_url} with payload: \n {payload_formatted}")  # Debug output
 
         SERVICE_HOSTNAME = "tiny-llama-deploy.default.example.com"
         # send request

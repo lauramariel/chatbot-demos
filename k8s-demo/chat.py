@@ -220,11 +220,12 @@ def generate_response(input_text):
 
     """
     input_prompt = get_json_format_prompt(input_text)
+    input_prompt_formatted = json.dumps(input_prompt, indent=4)
     url = f"http://{INGRESS_HOST}:{INGRESS_PORT}/v2/models/{LLM}/infer"
     headers = {"Host": SERVICE_HOSTNAME, "Content-Type": "application/json; charset=utf-8"}
     try:
         start = time.perf_counter()
-        print(f"Sending request to {url} with payload: {input_prompt}")
+        print(f"Sending request to {url} with payload: \n{input_prompt_formatted}")
         response = requests.post(url, json=input_prompt, timeout=600, headers=headers)
         request_time = time.perf_counter() - start
         print(request_time)
