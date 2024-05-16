@@ -38,7 +38,7 @@ Note: This lab is for demo purposes only to show connecting a chatbot app to a r
 """
 
 # App title
-st.title("Welcome to GTS '24")
+st.title("Welcome to .NEXT Barcelona :flag-es:")
 st.markdown(html_code, unsafe_allow_html=True)
 
 def clear_chat_history():
@@ -58,10 +58,10 @@ with st.sidebar:
 
     st.title("GPT-in-a-Box")
     st.markdown(
-        "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT "
+        "GPT-in-a-Box is a turnkey AI solution for organizations wanting to implement GPT"
         "capabilities while maintaining control of their data and applications. Read the "
-        "[announcement]"
-        "(https://www.nutanix.com/blog/nutanix-simplifies-your-ai-innovation-learning-curve)"
+        "[blog]"
+        "(http://nutanix.com/blog/gpt-in-a-box-2-is-here)"
     )
 
     st.subheader("Models")
