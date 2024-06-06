@@ -85,7 +85,7 @@ Note: This lab is for demo purposes only to show connecting a chatbot app to a r
 """
 
 # App title
-st.title("Welcome to .NEXT Barcelona :flag-es:")
+st.title("Welcome to the Bootcamp AI Chatbot :robot_face:")
 st.markdown(html_code, unsafe_allow_html=True)
 
 def clear_chat_history():
